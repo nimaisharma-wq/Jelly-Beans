@@ -50,7 +50,19 @@ input{font-family:inherit}
 .counter{font-size:15px;color:#CDE4D6;line-height:1.5}
 .counter b{font-family:'Fraunces',serif;font-size:40px;color:#fff;display:block;line-height:1}
 .privacy{margin-top:26px;font-size:12px;color:#9DBCA9;max-width:40ch}
-#adminTap{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 14px;color:rgba(255,255,255,.55);font-size:12px;letter-spacing:.1em;min-height:44px;-webkit-tap-highlight-color:transparent}
+#adminTap{position:fixed;top:10px;right:10px;z-index:40;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:10px;padding:12px 16px;color:rgba(255,255,255,.7);font-size:13px;font-weight:600;letter-spacing:.06em;min-height:46px;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.pinmodal{position:fixed;inset:0;background:rgba(16,26,20,.82);display:none;align-items:center;justify-content:center;z-index:70;padding:20px}
+.pinmodal.show{display:flex}
+.pinmodal .box{background:#fff;border-radius:18px;padding:28px 26px;width:100%;max-width:340px;text-align:center}
+.pinmodal h3{font-family:'Fraunces',serif;font-size:22px;margin-bottom:6px;color:var(--ink)}
+.pinmodal p{font-size:13.5px;color:var(--mute);margin-bottom:16px}
+.pinmodal input{width:100%;padding:16px;font-size:30px;letter-spacing:.4em;text-align:center;border:2px solid var(--line);border-radius:12px;font-family:'Outfit',sans-serif}
+.pinmodal input:focus{outline:none;border-color:var(--green)}
+.pinmodal .btns{display:flex;gap:10px;margin-top:16px}
+.pinmodal button{flex:1;padding:14px;font-size:16px;font-weight:700;border-radius:12px;border:none;cursor:pointer}
+.pinmodal .go{background:var(--green);color:#fff}
+.pinmodal .cancel{background:#EEF1EF;color:var(--ink)}
+.pinmodal .err{color:var(--bean-red);font-size:13px;margin-top:10px;min-height:16px}
 
 /* ---------- RIGHT: form ---------- */
 .formside{padding:48px clamp(24px,5vw,72px);display:flex;flex-direction:column;justify-content:center}
@@ -128,7 +140,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--orange);outline
       <div class="counter"><b id="entryCount">0</b>guesses so far</div>
     </div>
     <p class="privacy">By entering you agree IRB may contact you about research services. We never sell your details.</p>
-    <button id="adminTap" aria-label="Staff access">IRB · staff</button>
+    <button id="adminTap" aria-label="Staff access">Staff</button>
   </aside>
 
   <main class="formside">
@@ -176,6 +188,19 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--orange);outline
   <div class="guessline">Your guess: <b id="thanksGuess">—</b> candies</div>
   <button id="nextBtn">Next visitor →</button>
   <div class="auto">Resetting automatically…</div>
+</div>
+
+<div class="pinmodal" id="pinModal">
+  <div class="box">
+    <h3>Staff access</h3>
+    <p>Enter the staff PIN to open the entries dashboard.</p>
+    <input id="pinInput" type="tel" inputmode="numeric" maxlength="6" placeholder="••••" autocomplete="off">
+    <div class="err" id="pinErr"></div>
+    <div class="btns">
+      <button class="cancel" id="pinCancel">Cancel</button>
+      <button class="go" id="pinGo">Open</button>
+    </div>
+  </div>
 </div>
 
 <div class="admin" id="admin">
@@ -338,12 +363,30 @@ function resetKiosk(){
 }
 document.getElementById('nextBtn').addEventListener('click', resetKiosk);
 
-/* ---------- admin (5 taps) ---------- */
-let taps = 0, tapTimer = null;
+/* ---------- admin (PIN) ---------- */
+const STAFF_PIN = '9632';   // change this to your own PIN if you like
+const pinModal = document.getElementById('pinModal');
 document.getElementById('adminTap').addEventListener('click', ()=>{
-  taps++; clearTimeout(tapTimer); tapTimer = setTimeout(()=>taps=0, 1600);
-  if (taps>=5){ taps=0; openAdmin(); }
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinErr').textContent = '';
+  pinModal.classList.add('show');
+  setTimeout(()=>document.getElementById('pinInput').focus(), 100);
 });
+function tryPin(){
+  const v = document.getElementById('pinInput').value.trim();
+  if (v === STAFF_PIN){
+    pinModal.classList.remove('show');
+    openAdmin();
+  } else {
+    document.getElementById('pinErr').textContent = 'Incorrect PIN — try again.';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+document.getElementById('pinGo').addEventListener('click', tryPin);
+document.getElementById('pinInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryPin(); });
+document.getElementById('pinCancel').addEventListener('click', ()=>pinModal.classList.remove('show'));
+pinModal.addEventListener('click', (e)=>{ if(e.target===pinModal) pinModal.classList.remove('show'); });
 function openAdmin(){
   const tb = document.querySelector('#entriesTable tbody');
   tb.innerHTML = '';
